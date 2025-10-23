@@ -13,6 +13,7 @@ uv run streamlit run main.py
 2. `get_response_generator` (siehe `utils.py`)
 3. Bonus:
     * eigene Ideen / Verbesserungen der App
+    * Aufgabe: Query router (keine pdfs retrieven falls nicht relevant)
     * Aufgabe: neuer Button um weitere Dokumente hinzuzufügen
     * Aufgabe: Implementiere Query Expansion:
         * Generiere 2-3 alternative Formulierungen der Frage

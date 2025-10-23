@@ -58,7 +58,7 @@ if prompt := st.chat_input("What would you like to know?"):
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                response = get_response(prompt, retriever)
+                response = get_response(prompt, retriever, messages=st.session_state.messages)
                 answer = response.answer
                 sources = response.sources
                 st.markdown(answer)

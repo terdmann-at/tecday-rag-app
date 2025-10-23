@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+import pdb
 from typing import Literal
 
 import streamlit as st
@@ -26,6 +27,7 @@ def get_chat_generator(
 def get_embedder() -> AzureOpenAIEmbeddings:
     return AzureOpenAIEmbeddings(model="text-embedding-3-small")
 
+pdb.set_trace()
 
 @st.cache_resource(show_spinner="Loading document...")
 def get_pdf_text(pdf_path: Path) -> str:
@@ -80,10 +82,22 @@ def get_retriever(pdf_paths: list[Path]) -> VectorStoreRetriever:
     # Tipps:
     #   * Siehe: https://docs.langchain.com/oss/python/langchain/overview
 
+    #
+    # Lösung:
+    #
+    # Load the document
     for pdf_path in pdf_paths:
         loader = PyPDFLoader(pdf_path)
-        # ... DEIN CODE HIER ...
-
+        # 3. Split the document into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200
+        )
+        chunks = loader.load_and_split(text_splitter=text_splitter)
+        # 4. Add the chunks to the vector store
+        vectorstore.add_documents(documents=chunks)
+    #
+    # /Lösung
+    #
 
     retriever = vectorstore.as_retriever(
         search_type="mmr", search_kwargs={"k": 2, "lambda_mult": 0.25}
@@ -127,7 +141,7 @@ def get_response_generator() -> Callable:
     Creates and returns a function for answering questions.
     """
 
-    def get_response(query: str, retriever: VectorStoreRetriever) -> RAGResponse:
+    def get_response(query: str, retriever: VectorStoreRetriever, messages) -> RAGResponse:
         #
         # Aufgabe 2.: Implementiere den RAG workflow:
         #
@@ -143,15 +157,16 @@ def get_response_generator() -> Callable:
         #   * Siehe: https://reference.langchain.com/python/langchain/
 
         prompt = ChatPromptTemplate.from_template("""
-        ... DEIN CODE HIER ...
+        You are a helpful assitant. Use the context to answer the user query.                         
+        {context}
+        Question: {query}
         """)
 
         retrieved_docs = retriever.invoke(query)
         context: str = "<context>"
         sources: list[RAGSource] = []
         for doc in retrieved_docs:
-            # ... DEIN CODE HIER ...
-            pass
+            context += doc.page_content
         context += "</context>"
 
         # Get the model
@@ -159,7 +174,43 @@ def get_response_generator() -> Callable:
         # ...DEIN CODE HIER...
         content = "I am not implemented yet."
 
-        
+        #
+        # Lösung:
+        #
+
+        prompt = ChatPromptTemplate(
+            [
+                ("system", "{context}"),
+                ("placeholder", "{conversation}"),
+                ("user", "{input}")
+            ]
+        )
+
+        retrieved_docs = retriever.invoke(query)
+        context: str = "<context>"
+        sources = []
+        for doc in retrieved_docs:
+            context += doc.page_content
+            context += "\n\n"
+            sources.append(
+                RAGSource(
+                    doc.metadata["source"],
+                    doc.metadata["page_label"],
+                    doc.page_content,
+                )
+            )
+        context += "</context>"
+
+        # Get the model
+        llm = get_chat_generator()
+        # Generate a response
+        chain = prompt | llm
+        response = chain.invoke({"input": query, "context": context, "conversation": messages})
+        # Handle the response content properly
+        content = str(response.content)
+        #
+        # /Lösung
+        #
         return RAGResponse(content, sources)
 
     return get_response
