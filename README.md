@@ -7,6 +7,8 @@ Befülle die `.env` Datei mit den notwendigen Schlüsseln und starte die App via
 uv run streamlit run main.py
 ```
 
+Die benötigten Keys stehen in `.env.example`.
+
 # Aufgaben
 
 1. `get_retriever` (siehe `utils.py`)
